@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="My Tracker">
+<meta name="theme-color" content="#07070F">
+<link rel="manifest" href="data:application/json,{
+  %22name%22:%22My%20Tracker%22,
+  %22short_name%22:%22Tracker%22,
+  %22start_url%22:%22/%22,
+  %22display%22:%22standalone%22,
+  %22background_color%22:%22%2307070F%22,
+  %22theme_color%22:%22%2307070F%22
+}">
+<title>My Tracker 💪🏾</title>
+<style>
+:root{
+  --bg:#07070F;--card:#0F0F1E;--card2:#14142A;--bdr:rgba(255,255,255,0.08);
+  --red:#FF2D55;--gold:#FFD60A;--green:#30D158;--blue:#0A84FF;--purple:#BF5AF2;
+  --text:#F2F2F7;--sub:#8E8E93;
+}
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;color:var(--text)}
+body{overscroll-behavior:none}
+#wrap{display:flex;flex-direction:column;height:100dvh;max-width:480px;margin:0 auto}
+#scroll{flex:1;overflow-y:auto;padding-bottom:80px;padding-top:env(safe-area-inset-top,0)}
+#scroll::-webkit-scrollbar{display:none}
+
+/* Nav */
+#nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+  background:rgba(7,7,15,.97);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-top:1px solid var(--bdr);display:flex;
+  padding-bottom:max(env(safe-area-inset-bottom,0px),10px);z-index:100}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 5px;
+  background:none;border:none;cursor:pointer;color:var(--sub);font-family:inherit;transition:color .2s}
+.nb.on{color:var(--red)}.nb .ni{font-size:23px;transition:transform .2s;line-height:1}
+.nb.on .ni{transform:scale(1.12)}.nb .nl{font-size:10px;margin-top:4px;font-weight:400}
+.nb.on .nl{font-weight:700}.ndot{width:4px;height:4px;border-radius:2px;background:var(--red);margin-top:3px}
+
+/* Layout */
+.pad{padding:0 16px}
+.card{background:var(--card);border-radius:16px;border:1px solid var(--bdr);padding:16px;margin-bottom:12px}
+.c2{background:var(--card2)}
+.sl{font-size:11px;color:var(--sub);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin:14px 0 8px}
+.pt{font-size:25px;font-weight:800;color:var(--text);margin-bottom:14px;padding:20px 16px 0}
+
+/* KPIs */
+.krow{display:flex;gap:9px;margin-bottom:12px}
+.kpi{flex:1;background:var(--card);border-radius:14px;border:1px solid var(--bdr);padding:12px 8px;text-align:center;min-width:0}
+.kv{font-size:22px;font-weight:800;line-height:1.1}.kl{font-size:9px;color:var(--sub);margin-top:4px;line-height:1.3}
+
+/* Buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;
+  padding:14px 20px;font-size:15px;font-weight:600;border:none;cursor:pointer;
+  font-family:inherit;width:100%;-webkit-appearance:none;transition:opacity .15s;letter-spacing:.1px}
+.btn:active{opacity:.65}
+.br{background:var(--red);color:#fff}.bg{background:var(--green);color:#fff}
+.bo{background:transparent;border:1.5px solid rgba(255,255,255,.2);color:var(--sub)}
+
+/* Form */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;color:var(--sub);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+.field input,.field textarea{width:100%;background:var(--card2);border:1px solid var(--bdr);border-radius:10px;
+  padding:12px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none;-webkit-appearance:none}
+.field textarea{resize:none;height:68px}
+input[type=date]{color-scheme:dark}
+input[type=number]{-moz-appearance:textfield}
+input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:var(--card2);outline:none;margin-top:4px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:var(--red);box-shadow:0 2px 10px rgba(255,45,85,.5)}
+
+/* Toggles */
+.tr{display:flex;gap:8px}
+.tg{flex:1;padding:11px 4px;border-radius:10px;border:1.5px solid var(--bdr);background:transparent;
+  color:var(--sub);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;transition:all .2s}
+.tg-g{border-color:var(--green);background:rgba(48,209,88,.15);color:var(--green)}
+.tg-r{border-color:var(--red);background:rgba(255,45,85,.15);color:var(--red)}
+
+/* Badge */
+.bdg{display:inline-flex;align-items:center;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:600}
+
+/* Progress bar */
+.pbt{height:8px;border-radius:4px;background:var(--card2);overflow:hidden}
+.pbf{height:100%;border-radius:4px;transition:width .4s ease}
+
+/* Skincare steps */
+.step{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;margin-bottom:8px;
+  cursor:pointer;border:1.5px solid var(--bdr);background:var(--card2);transition:all .25s;-webkit-user-select:none;user-select:none}
+.step.done{border-color:rgba(48,209,88,.45);background:rgba(48,209,88,.1)}
+.si{width:33px;height:33px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--card);transition:background .2s}
+.step.done .si{background:var(--green);font-size:15px}
+.sn{font-size:14px;font-weight:500;color:var(--sub);transition:all .2s}
+.step.done .sn{font-weight:700;color:var(--text)}.sh{font-size:11px;color:var(--sub);margin-top:1px}
+
+/* Stat grid */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.sc{background:var(--card);border-radius:14px;padding:13px}
+.sv{font-size:22px;font-weight:800;line-height:1}
+
+/* Schedule rows */
+.sr{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;margin-bottom:6px;border:1px solid var(--bdr);background:var(--card2)}
+.sb{width:3px;height:30px;border-radius:2px;flex-shrink:0}
+
+/* Circuit */
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.ci{background:var(--card2);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:8px}
+.cn{width:22px;height:22px;border-radius:6px;background:rgba(255,45,85,.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--red);flex-shrink:0}
+
+/* Session + workout cards */
+.wc{background:var(--card);border-radius:13px;border:1px solid var(--bdr);padding:12px 14px;margin-bottom:8px}
+
+.empty{color:var(--sub);font-size:14px;text-align:center;padding:32px 0}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="scroll"><div id="content">
+    <div style="display:flex;align-items:center;justify-content:center;height:80dvh;flex-direction:column;gap:16px">
+      <div style="font-size:56px">💪🏾</div>
+      <div style="color:var(--sub);font-size:14px">Loading…</div>
+    </div>
+  </div></div>
+  <nav id="nav"></nav>
+</div>
+
+<script>
+// ── Data ───────────────────────────────────────────────────────────────────────
+const SCHED=[
+  {day:'Monday',   lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',           c:'#FF2D55'},
+  {day:'Tuesday',  lbl:'🕺 Dance Teaching',      sub:'19:30–22:30 · counts as full cardio',    c:'#BF5AF2'},
+  {day:'Wednesday',lbl:'🎓 Uni Class / 🚶 Walk', sub:'Wed A: 17:15–21:30 · Wed B: free walk',  c:'#0A84FF'},
+  {day:'Thursday', lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',            c:'#FF2D55'},
+  {day:'Friday',   lbl:'🧘 Rest or Light Walk',  sub:'Recovery day',                           c:'#30D158'},
+  {day:'Saturday', lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',            c:'#FF2D55'},
+  {day:'Sunday',   lbl:'📚 Full Rest',           sub:'PhD / Recovery',                         c:'#8E8E93'},
+];
+const CX=['Jumping Jacks','Push-Ups','Squat Jumps','Mountain Climbers','Reverse Lunges','Plank Hold','Burpees'];
+const AM=[
+  {id:'am1',ic:'🧼',lb:'Cleanser',            ht:'CeraVe Foaming / La Roche-Posay'},
+  {id:'am2',ic:'💧',lb:'Moisturizer + Niacinamide', ht:'CeraVe AM / Neutrogena Hydro Boost'},
+  {id:'am3',ic:'☀️',lb:'SPF 50+ (non-white-cast)', ht:'La Roche-Posay Invisible Fluid — MANDATORY'},
+  {id:'am4',ic:'💦',lb:'2L Water Goal',        ht:'Track hydration throughout the day'},
+];
+const PM=[
+  {id:'pm1',ic:'🧼',lb:'Cleanser (PM)',        ht:'Same cleanser — remove sweat & pollution'},
+  {id:'pm2',ic:'✨',lb:'Niacinamide Serum',     ht:'The Ordinary Niacinamide 10% + Zinc'},
+  {id:'pm3',ic:'🌙',lb:'Night Moisturizer',     ht:'CeraVe Moisturizing Cream'},
+  {id:'pm4',ic:'⭐',lb:'Special Treatment',     ht:'Weekly only: gentle exfoliant or mask'},
+];
+const AS=[...AM,...PM];
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MNS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ── Storage (localStorage — works fully offline) ───────────────────────────────
+const db={
+  get:(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},
+  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+};
+
+// ── State ──────────────────────────────────────────────────────────────────────
+const S={
+  tab:'dashboard',
+  workouts:    db.get('tr-workouts'),
+  measurements:db.get('tr-measurements'),
+  skincare:    db.get('tr-skincare'),
+  wForm:false, mForm:false, circuit:false,
+  wDur:28, wInt:7, wR:[true,true,true], wW:'A', wT:'HIIT Monday',
+};
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+const td  = () => new Date().toISOString().split('T')[0];
+const fd  = d  => { const x=new Date(d+'T12:00:00'); return `${x.getDate()} ${MNS[x.getMonth()]}`; };
+const dn  = () => DAYS[new Date().getDay()];
+const mo  = d  => d?.slice(0,7)||'';
+const tm  = () => td().slice(0,7);
+const gr  = () => { const h=new Date().getHours(); return h<12?'morning':h<18?'afternoon':'evening'; };
+const esc = s  => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const bdg = (t,c) => `<span class="bdg" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(t)}</span>`;
+
+function calcStreak() {
+  let s=0; const d=new Date();
+  for(let i=0;i<365;i++){
+    const k=d.toISOString().split('T')[0];
+    const x=S.skincare.find(v=>v.date===k);
+    if(!x||x.score<6) break;
+    s++; d.setDate(d.getDate()-1);
+  }
+  return s;
+}
+
+// ── SVG Charts ─────────────────────────────────────────────────────────────────
+function barChart(data, tgt) {
+  if(!data.length) return '<p class="empty" style="padding:10px 0">Log sessions to see chart</p>';
+  const W=280,H=120,pB=20,pT=8,pL=4,pR=4,cH=H-pB-pT,cW=W-pL-pR;
+  const mx=Math.max(...data.map(d=>d.v),1), slot=cW/data.length, bw=slot*.55;
+  let b='',l='';
+  data.forEach((d,i)=>{
+    const bh=Math.max((d.v/mx)*cH, d.v>0?2:0);
+    const x=(pL+i*slot+slot*.225).toFixed(1), y=(pT+cH-bh).toFixed(1);
+    b+=`<rect x="${x}" y="${y}" width="${bw.toFixed(1)}" height="${Math.max(bh,0).toFixed(1)}" fill="#FF2D55" rx="3"/>`;
+    l+=`<text x="${(pL+i*slot+slot*.5).toFixed(1)}" y="${H-4}" text-anchor="middle" fill="#8E8E93" font-size="9">${esc(d.name)}</text>`;
+  });
+  let tl='';
+  if(tgt!=null && mx>=tgt){
+    const ty=(pT+cH-(tgt/mx)*cH).toFixed(1);
+    tl=`<line x1="${pL}" y1="${ty}" x2="${W-pR}" y2="${ty}" stroke="#FFD60A" stroke-dasharray="4,3" stroke-width="1.5"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px" xmlns="http://www.w3.org/2000/svg">${b}${tl}${l}</svg>`;
+}
+
+function lineChart(data, key, col) {
+  const pts=data.filter(d=>d[key]!=null);
+  if(pts.length<2) return '<p class="empty" style="padding:10px 0">Add 2+ entries to see trend</p>';
+  const W=280,H=140,pB=22,pT=12,pL=34,pR=6,cW=W-pL-pR,cH=H-pB-pT;
+  const vs=pts.map(d=>d[key]), mn=Math.min(...vs), mx=Math.max(...vs), rng=mx-mn||.1;
+  const lo=mn-rng*.1, hi=mx+rng*.1, sp=hi-lo;
+  const cx=i=>(pL+(i/(pts.length-1))*cW).toFixed(1);
+  const cy=v=>(pT+cH-((v-lo)/sp)*cH).toFixed(1);
+  const path=pts.map((d,i)=>`${i?'L':'M'}${cx(i)},${cy(d[key])}`).join(' ');
+  const dots=pts.map((d,i)=>`<circle cx="${cx(i)}" cy="${cy(d[key])}" r="3.5" fill="${col}"/>`).join('');
+  const sk=Math.ceil(pts.length/5);
+  const xl=pts.map((d,i)=>i%sk===0?`<text x="${cx(i)}" y="${H-5}" text-anchor="middle" fill="#8E8E93" font-size="9">${esc(d.name)}</text>`:'').join('');
+  const yl=`<text x="${pL-4}" y="${(pT+5).toFixed(1)}" text-anchor="end" fill="#8E8E93" font-size="9">${mx.toFixed(1)}</text>
+    <text x="${pL-4}" y="${(pT+cH+4).toFixed(1)}" text-anchor="end" fill="#8E8E93" font-size="9">${mn.toFixed(1)}</text>`;
+  const area=`<path d="${path} L${cx(pts.length-1)},${(pT+cH).toFixed(1)} L${cx(0)},${(pT+cH).toFixed(1)} Z" fill="${col}" fill-opacity=".08"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px" xmlns="http://www.w3.org/2000/svg">${area}<path d="${path}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/>${dots}${yl}${xl}</svg>`;
+}
+
+function skinChart(data) {
+  const W=280,H=95,pB=18,pT=6,pL=4,pR=4,cH=H-pB-pT,cW=W-pL-pR,slot=cW/data.length,bw=slot*.55;
+  let b='',l='';
+  data.forEach((d,i)=>{
+    const bh=(d.s/8)*cH, x=(pL+i*slot+slot*.225).toFixed(1), y=(pT+cH-bh).toFixed(1);
+    const c=d.s>=6?'#30D158':d.s>=4?'#FFD60A':'#FF2D55';
+    b+=`<rect x="${x}" y="${y}" width="${bw.toFixed(1)}" height="${Math.max(bh,0).toFixed(1)}" fill="${c}" rx="3"/>`;
+    l+=`<text x="${(pL+i*slot+slot*.5).toFixed(1)}" y="${H-3}" text-anchor="middle" fill="#8E8E93" font-size="9">${esc(d.n)}</text>`;
+  });
+  const ty=(pT+cH-(6/8)*cH).toFixed(1);
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px" xmlns="http://www.w3.org/2000/svg">${b}<line x1="${pL}" y1="${ty}" x2="${W-pR}" y2="${ty}" stroke="#30D158" stroke-dasharray="4,3" stroke-width="1.5"/>${l}</svg>`;
+}
+
+// ── Pages ──────────────────────────────────────────────────────────────────────
+function pgDash() {
+  const day=dn(), sc=SCHED.find(s=>s.day===day)||SCHED[0];
+  const sess=S.workouts.filter(w=>mo(w.date)===tm()).length;
+  const str=calcStreak();
+  const sm=[...S.measurements].sort((a,b)=>a.date.localeCompare(b.date));
+  const wl=sm.length>=2?Math.max(0,sm[0].weight-sm[sm.length-1].weight).toFixed(1):null;
+  const mm={};
+  S.workouts.forEach(w=>{const m=mo(w.date);if(m)mm[m]=(mm[m]||0)+1});
+  const md=Object.entries(mm).sort().slice(-6).map(([m,v])=>({name:MNS[parseInt(m.split('-')[1])-1],v}));
+  const rows=SCHED.map(s=>`
+    <div class="sr" style="${s.day===day?`background:${s.c}18;border-color:${s.c}44`:''}">
+      <div class="sb" style="background:${s.c}"></div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:${s.day===day?s.c:'var(--sub)'}">${s.day}</div>
+        <div style="font-size:13px;color:var(--text)">${s.lbl}</div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div style="padding:20px 16px 6px">
+      <div style="font-size:12px;color:var(--sub);margin-bottom:3px">
+        ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}
+      </div>
+      <div style="font-size:25px;font-weight:800;line-height:1.2">Good ${gr()} 💪🏾</div>
+    </div>
+    <div class="pad">
+      <div class="krow">
+        <div class="kpi" style="border-color:#FF2D5540">
+          <div style="font-size:20px;margin-bottom:3px">🏋️</div>
+          <div class="kv" style="color:#FF2D55">${sess}</div>
+          <div class="kl">Sessions this month</div>
+        </div>
+        <div class="kpi" style="border-color:#FFD60A40">
+          <div style="font-size:20px;margin-bottom:3px">✨</div>
+          <div class="kv" style="color:#FFD60A">${str}d</div>
+          <div class="kl">Skincare streak</div>
+        </div>
+        <div class="kpi" style="border-color:#30D15840">
+          <div style="font-size:20px;margin-bottom:3px">📉</div>
+          <div class="kv" style="color:#30D158">${wl??'—'}</div>
+          <div class="kl">kg lost</div>
+        </div>
+      </div>
+
+      <div class="card" style="border-color:${sc.c}55;background:${sc.c}11">
+        <div style="font-size:10px;color:${sc.c};font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Today · ${day}</div>
+        <div style="font-size:16px;font-weight:700">${sc.lbl}</div>
+        <div style="font-size:13px;color:var(--sub);margin-top:2px">${sc.sub}</div>
+      </div>
+
+      <div class="sl">This week</div>
+      ${rows}
+
+      ${md.length ? `
+        <div class="sl">Monthly sessions</div>
+        <div class="card">
+          ${barChart(md,12)}
+          <div style="font-size:10px;color:var(--sub);text-align:center;margin-top:5px">Gold line = 12 session target</div>
+        </div>` : ''}
+
+      <div style="height:16px"></div>
+    </div>`;
+}
+
+function pgWork() {
+  const rBtns = ['R1','R2','R3'].map((r,i)=>
+    `<button class="tg${S.wR[i]?' tg-g':''}" onclick="tR(${i})">${S.wR[i]?'✓ ':''}${r}</button>`).join('');
+
+  const tList = ['HIIT Monday','HIIT Thursday','HIIT Saturday','Dance Teaching','Light Walk'].map(t=>
+    `<div onclick="pT('${esc(t)}')" style="padding:10px 13px;border-radius:10px;margin-bottom:5px;cursor:pointer;
+      background:${S.wT===t?'rgba(255,45,85,.15)':'var(--card)'};
+      border:1px solid ${S.wT===t?'rgba(255,45,85,.4)':'var(--bdr)'};
+      color:${S.wT===t?'var(--text)':'var(--sub)'};font-size:14px;font-weight:${S.wT===t?700:400}">
+      ${t.includes('HIIT')?'🏃 ':t.includes('Dance')?'🕺 ':'🚶 '}${t}
+    </div>`).join('');
+
+  const form = S.wForm ? `
+    <div class="card c2" style="margin-top:11px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:13px">New Session</div>
+      <div class="field"><label>Date</label><input type="date" id="wfd" value="${td()}"></div>
+      <div class="field">
+        <label>Week Type</label>
+        <div class="tr">
+          <button class="tg${S.wW==='A'?' tg-r':''}" onclick="pW('A')">Week A</button>
+          <button class="tg${S.wW==='B'?' tg-r':''}" onclick="pW('B')">Week B</button>
+        </div>
+        <div style="font-size:11px;color:var(--sub);margin-top:5px">Week A = Uni class Wed · Week B = Free Wed</div>
+      </div>
+      <div class="field"><label>Session Type</label>${tList}</div>
+      <div class="field"><label>Rounds Completed</label><div class="tr">${rBtns}</div></div>
+      <div class="field">
+        <div style="display:flex;justify-content:space-between;margin-bottom:7px">
+          <label style="margin:0">Duration</label>${bdg(S.wDur+' min','#0A84FF')}
+        </div>
+        <input type="range" min="10" max="60" value="${S.wDur}" oninput="sD(this.value)">
+      </div>
+      <div class="field">
+        <div style="display:flex;justify-content:space-between;margin-bottom:7px">
+          <label style="margin:0">Intensity</label>
+          ${bdg(S.wInt+'/10', S.wInt>=8?'#FF2D55':S.wInt>=5?'#FFD60A':'#30D158')}
+        </div>
+        <input type="range" min="1" max="10" value="${S.wInt}" oninput="sI(this.value)">
+      </div>
+      <div class="field"><label>Notes (optional)</label><textarea id="wfn" placeholder="How did it feel?"></textarea></div>
+      <div style="display:flex;gap:9px">
+        <button class="btn bo" onclick="S.wForm=false;render()">Cancel</button>
+        <button class="btn br" onclick="svW()">💾 Save</button>
+      </div>
+    </div>` : '';
+
+  const circ = S.circuit ? `
+    <div style="margin-top:11px">
+      <div class="cg">
+        ${CX.map((x,i)=>`<div class="ci"><div class="cn">${i+1}</div><div style="font-size:12px;color:var(--text);font-weight:500">${x}</div></div>`).join('')}
+      </div>
+      <div style="background:rgba(255,45,85,.1);border-radius:10px;padding:9px 13px;border:1px solid rgba(255,45,85,.28)">
+        <div style="font-size:12px;color:#FF2D55;font-weight:600">⏱ 40s work · 60s rest between rounds · × 3 rounds</div>
+      </div>
+    </div>` : '';
+
+  const recent = [...S.workouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12);
+  const hist = recent.length ? recent.map(w=>`
+    <div class="wc">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:14px;font-weight:700">
+            ${w.type?.includes('HIIT')?'🏃':w.type?.includes('Dance')?'🕺':'🚶'} ${esc(w.type||'')}
+          </div>
+          <div style="font-size:12px;color:var(--sub);margin-top:2px">
+            ${fd(w.date)} · Week ${esc(w.week||'')} · ${w.duration} min
+          </div>
+          ${w.notes?`<div style="font-size:12px;color:var(--sub);margin-top:2px;font-style:italic">"${esc(w.notes)}"</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${bdg(w.intensity+'/10','#FF2D55')}
+          <div style="font-size:12px;color:#30D158;font-weight:700">${w.completedRounds}/3 rounds</div>
+        </div>
+      </div>
+    </div>`).join('') : '<div class="empty">No sessions yet — log your first one! 💪</div>';
+
+  return `
+    <div class="pt">Workout Log</div>
+    <div class="pad">
+      <button class="btn br" onclick="S.wForm=!S.wForm;render()">
+        ${S.wForm?'✕ Cancel':'＋ Log a Session'}
+      </button>
+      ${form}
+      <div class="card" style="margin-top:11px">
+        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="S.circuit=!S.circuit;render()">
+          <div style="font-weight:700;font-size:15px">🔥 Circuit Reference</div>
+          <span style="color:var(--sub);font-size:20px">${S.circuit?'∧':'∨'}</span>
+        </div>
+        ${circ}
+      </div>
+      ${recent.length?'<div class="sl">Recent Sessions</div>':''}
+      ${hist}
+      <div style="height:16px"></div>
+    </div>`;
+}
+
+function pgBody() {
+  const sm=[...S.measurements].sort((a,b)=>a.date.localeCompare(b.date));
+  const f=sm[0], la=sm[sm.length-1];
+  const diff=k=>{
+    if(!f||!la||f.id===la.id||!f[k]||!la[k]) return null;
+    const d=la[k]-f[k];
+    return d ? (d>0?`+${d.toFixed(1)}`:d.toFixed(1)) : null;
+  };
+  const cd=sm.map(m=>({name:fd(m.date),weight:m.weight,waist:m.waist}));
+
+  const form = S.mForm ? `
+    <div class="card c2" style="margin-top:11px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:13px">New Entry</div>
+      <div style="background:rgba(255,214,10,.1);border:1px solid rgba(255,214,10,.28);border-radius:10px;padding:10px 13px;margin-bottom:13px;font-size:12px;color:#FFD60A">
+        📅 Measure every 2 weeks · Same time of day · Morning before eating
+      </div>
+      <div class="field"><label>Date</label><input type="date" id="mfd" value="${td()}"></div>
+      <div class="field"><label>Weight (kg) *</label><input type="number" id="mfw" placeholder="e.g. 81.5" step="0.1" inputmode="decimal"></div>
+      <div class="field"><label>Waist (cm)</label><input type="number" id="mfwa" placeholder="e.g. 86" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label>Chest (cm)</label><input type="number" id="mfc" placeholder="optional" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label>Hips (cm)</label><input type="number" id="mfh" placeholder="optional" step="0.5" inputmode="decimal"></div>
+      <div class="field"><label>Notes</label><textarea id="mfn" placeholder="How are you feeling?"></textarea></div>
+      <div style="display:flex;gap:9px">
+        <button class="btn bo" onclick="S.mForm=false;render()">Cancel</button>
+        <button class="btn bg" onclick="svM()">💾 Save</button>
+      </div>
+    </div>` : '';
+
+  const stats = la ? `
+    <div class="sl">Latest · ${fd(la.date)}</div>
+    <div class="sg">
+      ${[{l:'Weight',v:la.weight,u:'kg',c:'#0A84FF',k:'weight'},
+         {l:'Waist', v:la.waist, u:'cm',c:'#FF2D55',k:'waist'},
+         {l:'Chest', v:la.chest, u:'cm',c:'#BF5AF2',k:'chest'},
+         {l:'Hips',  v:la.hips,  u:'cm',c:'#FFD60A',k:'hips'}]
+        .filter(x=>x.v)
+        .map(x=>`
+          <div class="sc" style="border:1px solid ${x.c}30">
+            <div style="font-size:11px;color:var(--sub);margin-bottom:3px">${x.l}</div>
+            <div class="sv" style="color:${x.c}">${x.v}<span style="font-size:12px;margin-left:2px">${x.u}</span></div>
+            ${diff(x.k)?`<div style="font-size:12px;font-weight:600;margin-top:2px;color:${diff(x.k).startsWith('-')?'#30D158':'#FF2D55'}">${diff(x.k)} ${x.u}</div>`:''}
+          </div>`).join('')}
+    </div>` : '';
+
+  const charts = cd.length>=2 ? `
+    <div class="sl">Weight Trend</div>
+    <div class="card">${lineChart(cd,'weight','#0A84FF')}</div>
+    ${cd.some(d=>d.waist)?`<div class="sl">Waist Trend</div><div class="card">${lineChart(cd.filter(d=>d.waist),'waist','#FF2D55')}</div>`:''}
+    ` : '';
+
+  return `
+    <div class="pt">Measurements</div>
+    <div class="pad">
+      <button class="btn bg" onclick="S.mForm=!S.mForm;render()">
+        ${S.mForm?'✕ Cancel':'＋ Log Measurements'}
+      </button>
+      ${form}${stats}${charts}
+      ${!sm.length?'<div class="empty">No measurements yet — log your starting point! 📏</div>':''}
+      <div style="height:16px"></div>
+    </div>`;
+}
+
+function pgSkin() {
+  const tday=td();
+  const ent=S.skincare.find(x=>x.date===tday)||{date:tday,checks:{},score:0};
+  const chk=ent.checks||{};
+  const sc=AS.filter(s=>chk[s.id]).length, str=calcStreak();
+  const l7=Array.from({length:7},(_,i)=>{
+    const d=new Date(); d.setDate(d.getDate()-(6-i));
+    const k=d.toISOString().split('T')[0];
+    const x=S.skincare.find(v=>v.date===k);
+    return {n:DAYS[d.getDay()].slice(0,2), s:x?.score??0};
+  });
+  const bc=sc>=6?'#30D158':sc>=4?'#FFD60A':'#FF2D55';
+  const bm=sc>=6?'✅ Full day — great consistency!':sc>=4?'⚠️ Almost there — a few steps left':'❌ Keep going — you can do it!';
+  const sRow=s=>`
+    <div class="step${chk[s.id]?' done':''}" id="sp-${s.id}" onclick="tStep('${s.id}')">
+      <div class="si">${chk[s.id]?'✓':s.ic}</div>
+      <div><div class="sn">${s.lb}</div><div class="sh">${s.ht}</div></div>
+    </div>`;
+
+  return `
+    <div style="padding:20px 16px 0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div style="font-size:25px;font-weight:800">Skincare</div>
+        <div style="text-align:right">
+          <div style="font-size:26px;font-weight:800;color:#FFD60A;line-height:1">${str}🔥</div>
+          <div style="font-size:11px;color:var(--sub)">day streak</div>
+        </div>
+      </div>
+    </div>
+    <div class="pad">
+      <div class="card" style="padding:14px;margin-bottom:11px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+          <div style="font-size:14px;font-weight:600">Today's Score</div>
+          ${bdg(sc+'/8',bc)}
+        </div>
+        <div class="pbt"><div id="pbf" class="pbf" style="width:${(sc/8)*100}%;background:${bc}"></div></div>
+        <div id="pbm" style="font-size:11px;color:var(--sub);margin-top:7px">${bm}</div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+          <span style="font-size:18px">☀️</span>
+          <div style="font-size:15px;font-weight:700">Morning Routine</div>
+          <span style="font-size:11px;color:var(--sub);margin-left:auto">2–3 min</span>
+        </div>
+        ${AM.map(sRow).join('')}
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+          <span style="font-size:18px">🌙</span>
+          <div style="font-size:15px;font-weight:700">Evening Routine</div>
+          <span style="font-size:11px;color:var(--sub);margin-left:auto">2–3 min</span>
+        </div>
+        ${PM.map(sRow).join('')}
+      </div>
+
+      <div class="sl">Last 7 Days</div>
+      <div class="card">
+        ${skinChart(l7)}
+        <div style="font-size:10px;color:var(--sub);text-align:center;margin-top:5px">Green line = daily target (6/8 steps)</div>
+      </div>
+
+      <div class="card c2" style="border-color:rgba(255,214,10,.3)">
+        <div style="font-size:12px;font-weight:700;color:#FFD60A;margin-bottom:7px">💡 Key Reminders</div>
+        ${['SPF every morning — no exceptions, even Swiss winter',
+           'Niacinamide = #1 ally against hyperpigmentation',
+           'After dance Tuesday → never skip evening cleanser',
+           'Special Treatment (⭐) = once a week max, not daily']
+          .map(t=>`<div style="font-size:12px;color:var(--sub);margin-bottom:5px;padding-left:8px;border-left:2px solid rgba(255,214,10,.4)">${t}</div>`)
+          .join('')}
+      </div>
+      <div style="height:16px"></div>
+    </div>`;
+}
+
+// ── Nav & Render ──────────────────────────────────────────────────────────────
+function renderNav(){
+  document.getElementById('nav').innerHTML =
+    [{id:'dashboard',i:'🏠',l:'Home'},{id:'workout',i:'🏋️',l:'Workout'},{id:'body',i:'📏',l:'Body'},{id:'skincare',i:'✨',l:'Skin'}]
+    .map(t=>`
+      <button class="nb${S.tab===t.id?' on':''}" onclick="go('${t.id}')">
+        <span class="ni">${t.i}</span>
+        <span class="nl">${t.l}</span>
+        ${S.tab===t.id?'<div class="ndot"></div>':'<div style="height:7px"></div>'}
+      </button>`).join('');
+}
+
+function render(){
+  const pages={dashboard:pgDash, workout:pgWork, body:pgBody, skincare:pgSkin};
+  document.getElementById('content').innerHTML = (pages[S.tab]||pgDash)();
+  document.getElementById('scroll').scrollTop = 0;
+  renderNav();
+}
+
+// ── Event Handlers ─────────────────────────────────────────────────────────────
+window.go     = t  => { S.tab=t; render(); };
+window.tR     = i  => { S.wR[i]=!S.wR[i]; render(); };
+window.pW     = w  => { S.wW=w; render(); };
+window.pT     = t  => { S.wT=t; render(); };
+window.sD     = v  => { S.wDur=+v; render(); };
+window.sI     = v  => { S.wInt=+v; render(); };
+
+window.svW = () => {
+  const date  = document.getElementById('wfd')?.value || td();
+  const notes = document.getElementById('wfn')?.value || '';
+  S.workouts.push({
+    id: Date.now(), date, week:S.wW, type:S.wT,
+    rounds:[...S.wR], completedRounds:S.wR.filter(Boolean).length,
+    duration:S.wDur, intensity:S.wInt, notes
+  });
+  db.set('tr-workouts', S.workouts);
+  S.wForm=false; S.wR=[true,true,true]; S.wDur=28; S.wInt=7;
+  render();
+};
+
+window.svM = () => {
+  const w = parseFloat(document.getElementById('mfw')?.value);
+  if(!w){ alert('Please enter your weight'); return; }
+  S.measurements.push({
+    id:Date.now(), date:document.getElementById('mfd')?.value||td(),
+    weight:w,
+    waist:parseFloat(document.getElementById('mfwa')?.value)||null,
+    chest:parseFloat(document.getElementById('mfc')?.value)||null,
+    hips: parseFloat(document.getElementById('mfh')?.value)||null,
+    notes:document.getElementById('mfn')?.value||''
+  });
+  db.set('tr-measurements', S.measurements);
+  S.mForm=false; render();
+};
+
+window.tStep = id => {
+  const tday=td();
+  let ent=S.skincare.find(x=>x.date===tday);
+  if(!ent){ ent={date:tday,checks:{},score:0}; S.skincare.push(ent); }
+  ent.checks[id] = !ent.checks[id];
+  ent.score = AS.filter(s=>ent.checks[s.id]).length;
+  db.set('tr-skincare', S.skincare);
+  // Targeted DOM update — instant, no re-render
+  const el=document.getElementById('sp-'+id);
+  if(el){
+    const done=ent.checks[id];
+    el.className='step'+(done?' done':'');
+    el.querySelector('.si').textContent=done?'✓':AS.find(s=>s.id===id).ic;
+    el.querySelector('.sn').style.fontWeight=done?700:500;
+    el.querySelector('.sn').style.color=done?'var(--text)':'var(--sub)';
+  }
+  const sc=ent.score, bc=sc>=6?'#30D158':sc>=4?'#FFD60A':'#FF2D55';
+  const pb=document.getElementById('pbf');
+  if(pb){ pb.style.width=(sc/8*100)+'%'; pb.style.background=bc; }
+  const pm=document.getElementById('pbm');
+  if(pm) pm.textContent=sc>=6?'✅ Full day — great consistency!':sc>=4?'⚠️ Almost there — a few steps left':'❌ Keep going — you can do it!';
+  const bd=document.querySelector('.bdg');
+  if(bd){ bd.textContent=sc+'/8'; bd.style.background=bc+'22'; bd.style.color=bc; bd.style.borderColor=bc+'44'; }
+};
+
+// ── Service Worker Registration ────────────────────────────────────────────────
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => console.log('✅ Offline ready'))
+      .catch(e => console.log('SW error:', e));
+  });
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
