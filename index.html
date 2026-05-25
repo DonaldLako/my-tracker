@@ -7,14 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="My Tracker">
 <meta name="theme-color" content="#07070F">
-<link rel="manifest" href="data:application/json,{
-  %22name%22:%22My%20Tracker%22,
-  %22short_name%22:%22Tracker%22,
-  %22start_url%22:%22/%22,
-  %22display%22:%22standalone%22,
-  %22background_color%22:%22%2307070F%22,
-  %22theme_color%22:%22%2307070F%22
-}">
 <title>My Tracker 💪🏾</title>
 <style>
 :root{
@@ -60,7 +52,7 @@ body{overscroll-behavior:none}
 .br{background:var(--red);color:#fff}.bg{background:var(--green);color:#fff}
 .bo{background:transparent;border:1.5px solid rgba(255,255,255,.2);color:var(--sub)}
 
-/* Form */
+/* Forms */
 .field{margin-bottom:14px}
 .field label{display:block;font-size:11px;color:var(--sub);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
 .field input,.field textarea{width:100%;background:var(--card2);border:1px solid var(--bdr);border-radius:10px;
@@ -94,7 +86,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;heigh
 .sn{font-size:14px;font-weight:500;color:var(--sub);transition:all .2s}
 .step.done .sn{font-weight:700;color:var(--text)}.sh{font-size:11px;color:var(--sub);margin-top:1px}
 
-/* Stat grid */
+/* Date navigator */
+.date-nav{display:flex;align-items:center;justify-content:space-between;background:var(--card2);border-radius:14px;padding:12px 14px;margin-bottom:14px;border:1px solid var(--bdr)}
+.date-nav button{background:var(--card);border:1px solid var(--bdr);border-radius:9px;width:36px;height:36px;
+  color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s}
+.date-nav button:disabled{opacity:.25;cursor:default}
+
+/* Stats */
 .sg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .sc{background:var(--card);border-radius:14px;padding:13px}
 .sv{font-size:22px;font-weight:800;line-height:1}
@@ -103,15 +101,26 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;heigh
 .sr{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;margin-bottom:6px;border:1px solid var(--bdr);background:var(--card2)}
 .sb{width:3px;height:30px;border-radius:2px;flex-shrink:0}
 
+/* Upcoming schedule rows */
+.sch-row{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;margin-bottom:6px;border:1px solid var(--bdr);background:var(--card2);transition:opacity .2s}
+.sch-row.unavail{opacity:.55}
+.sch-row.tapable{cursor:pointer}
+.sch-row.tapable:active{opacity:.6}
+
 /* Circuit */
 .cg{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
 .ci{background:var(--card2);border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:8px}
 .cn{width:22px;height:22px;border-radius:6px;background:rgba(255,45,85,.2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--red);flex-shrink:0}
 
-/* Session + workout cards */
+/* Session cards */
 .wc{background:var(--card);border-radius:13px;border:1px solid var(--bdr);padding:12px 14px;margin-bottom:8px}
-
 .empty{color:var(--sub);font-size:14px;text-align:center;padding:32px 0}
+
+/* Calendar export button */
+.cal-btn{display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;
+  padding:13px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;width:100%;
+  background:rgba(10,132,255,.12);color:#0A84FF;border:1px solid rgba(10,132,255,.3);transition:opacity .15s}
+.cal-btn:active{opacity:.6}
 </style>
 </head>
 <body>
@@ -126,21 +135,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;heigh
 </div>
 
 <script>
-// ── Data ───────────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
 const SCHED=[
-  {day:'Monday',   lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',           c:'#FF2D55'},
-  {day:'Tuesday',  lbl:'🕺 Dance Teaching',      sub:'19:30–22:30 · counts as full cardio',    c:'#BF5AF2'},
-  {day:'Wednesday',lbl:'🎓 Uni Class / 🚶 Walk', sub:'Wed A: 17:15–21:30 · Wed B: free walk',  c:'#0A84FF'},
-  {day:'Thursday', lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',            c:'#FF2D55'},
-  {day:'Friday',   lbl:'🧘 Rest or Light Walk',  sub:'Recovery day',                           c:'#30D158'},
-  {day:'Saturday', lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',            c:'#FF2D55'},
-  {day:'Sunday',   lbl:'📚 Full Rest',           sub:'PhD / Recovery',                         c:'#8E8E93'},
+  {day:'Monday',   lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',          c:'#FF2D55'},
+  {day:'Tuesday',  lbl:'🕺 Dance Teaching',      sub:'19:30–22:30 · counts as full cardio',   c:'#BF5AF2'},
+  {day:'Wednesday',lbl:'🎓 Uni Class / 🚶 Walk', sub:'Wed A: 17:15–21:30 · Wed B: free walk', c:'#0A84FF'},
+  {day:'Thursday', lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',           c:'#FF2D55'},
+  {day:'Friday',   lbl:'🧘 Rest or Light Walk',  sub:'Recovery day',                          c:'#30D158'},
+  {day:'Saturday', lbl:'💪 HIIT Workout',       sub:'25–30 min circuit · 3 rounds',           c:'#FF2D55'},
+  {day:'Sunday',   lbl:'📚 Full Rest',           sub:'PhD / Recovery',                        c:'#8E8E93'},
 ];
+const WORKOUT_DAYS = ['Monday','Thursday','Saturday'];
 const CX=['Jumping Jacks','Push-Ups','Squat Jumps','Mountain Climbers','Reverse Lunges','Plank Hold','Burpees'];
 const AM=[
   {id:'am1',ic:'🧼',lb:'Cleanser',            ht:'CeraVe Foaming / La Roche-Posay'},
-  {id:'am2',ic:'💧',lb:'Moisturizer + Niacinamide', ht:'CeraVe AM / Neutrogena Hydro Boost'},
-  {id:'am3',ic:'☀️',lb:'SPF 50+ (non-white-cast)', ht:'La Roche-Posay Invisible Fluid — MANDATORY'},
+  {id:'am2',ic:'💧',lb:'Moisturizer + Niacinamide',ht:'CeraVe AM / Neutrogena Hydro Boost'},
+  {id:'am3',ic:'☀️',lb:'SPF 50+ (non-white-cast)',ht:'La Roche-Posay Invisible Fluid — MANDATORY'},
   {id:'am4',ic:'💦',lb:'2L Water Goal',        ht:'Track hydration throughout the day'},
 ];
 const PM=[
@@ -153,7 +163,7 @@ const AS=[...AM,...PM];
 const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const MNS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ── Storage (localStorage — works fully offline) ───────────────────────────────
+// ── Storage ────────────────────────────────────────────────────────────────────
 const db={
   get:(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}},
   set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
@@ -165,8 +175,10 @@ const S={
   workouts:    db.get('tr-workouts'),
   measurements:db.get('tr-measurements'),
   skincare:    db.get('tr-skincare'),
+  restDays:    db.get('tr-restdays',{}),  // {dateStr: true} — days marked unavailable
   wForm:false, mForm:false, circuit:false,
   wDur:28, wInt:7, wR:[true,true,true], wW:'A', wT:'HIIT Monday',
+  skinDate: new Date().toISOString().split('T')[0],  // selected date for skincare
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -179,6 +191,14 @@ const gr  = () => { const h=new Date().getHours(); return h<12?'morning':h<18?'a
 const esc = s  => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const bdg = (t,c) => `<span class="bdg" style="background:${c}22;color:${c};border:1px solid ${c}44">${esc(t)}</span>`;
 
+function dateLabel(ds) {
+  const tday = td();
+  if (ds === tday) return 'Today';
+  const yest = new Date(); yest.setDate(yest.getDate()-1);
+  if (ds === yest.toISOString().split('T')[0]) return 'Yesterday';
+  return fd(ds);
+}
+
 function calcStreak() {
   let s=0; const d=new Date();
   for(let i=0;i<365;i++){
@@ -190,6 +210,17 @@ function calcStreak() {
   return s;
 }
 
+function nextWorkout() {
+  // Find next non-rest workout day from today
+  for(let i=0;i<14;i++){
+    const d=new Date(); d.setDate(d.getDate()+i);
+    const ds=d.toISOString().split('T')[0];
+    const day=DAYS[d.getDay()];
+    if(WORKOUT_DAYS.includes(day) && !S.restDays[ds]) return {ds, day, daysAway:i};
+  }
+  return null;
+}
+
 // ── SVG Charts ─────────────────────────────────────────────────────────────────
 function barChart(data, tgt) {
   if(!data.length) return '<p class="empty" style="padding:10px 0">Log sessions to see chart</p>';
@@ -197,7 +228,7 @@ function barChart(data, tgt) {
   const mx=Math.max(...data.map(d=>d.v),1), slot=cW/data.length, bw=slot*.55;
   let b='',l='';
   data.forEach((d,i)=>{
-    const bh=Math.max((d.v/mx)*cH, d.v>0?2:0);
+    const bh=Math.max((d.v/mx)*cH,d.v>0?2:0);
     const x=(pL+i*slot+slot*.225).toFixed(1), y=(pT+cH-bh).toFixed(1);
     b+=`<rect x="${x}" y="${y}" width="${bw.toFixed(1)}" height="${Math.max(bh,0).toFixed(1)}" fill="#FF2D55" rx="3"/>`;
     l+=`<text x="${(pL+i*slot+slot*.5).toFixed(1)}" y="${H-4}" text-anchor="middle" fill="#8E8E93" font-size="9">${esc(d.name)}</text>`;
@@ -241,7 +272,76 @@ function skinChart(data) {
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px" xmlns="http://www.w3.org/2000/svg">${b}<line x1="${pL}" y1="${ty}" x2="${W-pR}" y2="${ty}" stroke="#30D158" stroke-dasharray="4,3" stroke-width="1.5"/>${l}</svg>`;
 }
 
-// ── Pages ──────────────────────────────────────────────────────────────────────
+// ── UPCOMING SCHEDULE (used in workout tab) ────────────────────────────────────
+function upcomingScheduleHTML() {
+  let rows = '';
+  for(let i=0; i<14; i++){
+    const d=new Date(); d.setDate(d.getDate()+i);
+    const ds=d.toISOString().split('T')[0];
+    const day=DAYS[d.getDay()];
+    const sc=SCHED.find(s=>s.day===day);
+    const isWorkout=WORKOUT_DAYS.includes(day);
+    const isUnavail=S.restDays[ds];
+    const isToday=ds===td();
+
+    let rowColor = sc ? sc.c : '#8E8E93';
+    let rowLabel = sc ? sc.lbl : '🧘 Rest';
+    let rowSub   = sc ? sc.sub : '';
+    let tapHint  = '';
+
+    if(isUnavail){
+      rowColor='#8E8E93';
+      rowLabel='😴 Unavailable / Rest';
+      rowSub='Tap to restore';
+      tapHint='restore';
+    } else if(isWorkout){
+      tapHint='mark unavailable';
+    }
+
+    const tapable = isWorkout || isUnavail;
+
+    rows += `
+      <div class="sch-row${isUnavail?' unavail':''}${tapable?' tapable':''}"
+           style="border-color:${isToday?rowColor+'55':'var(--bdr)'};background:${isToday?rowColor+'14':'var(--card2)'}"
+           ${tapable?`onclick="toggleRest('${ds}')"`:''}>
+        <div style="width:3px;height:34px;border-radius:2px;background:${isUnavail?'#8E8E93':rowColor};flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;font-weight:700;color:${isToday?rowColor:'var(--sub)'}">
+            ${isToday?'TODAY · ':''}${day.toUpperCase()} · ${d.getDate()} ${MNS[d.getMonth()]}
+          </div>
+          <div style="font-size:13px;color:${isUnavail?'var(--sub)':'var(--text)'};${isUnavail?'text-decoration:line-through':''}">${rowLabel}</div>
+          ${rowSub&&!isUnavail?`<div style="font-size:11px;color:var(--sub);margin-top:1px">${rowSub}</div>`:''}
+        </div>
+        ${tapable?`<div style="font-size:11px;font-weight:600;color:${isUnavail?'#30D158':'var(--sub)'};flex-shrink:0;text-align:right">${isUnavail?'✓ restore':'skip'}</div>`:''}
+      </div>`;
+  }
+
+  const nextW = nextWorkout();
+  const nextLabel = nextW
+    ? nextW.daysAway===0 ? '💪 Workout day — let\'s go!'
+    : nextW.daysAway===1 ? `💪 Next workout tomorrow (${nextW.day})`
+    : `💪 Next workout in ${nextW.daysAway} days (${nextW.day} ${fd(nextW.ds)})`
+    : '😴 No workout days in next 2 weeks';
+
+  return `
+    <div class="card" style="background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.3);padding:12px 14px;margin-top:11px">
+      <div style="font-size:13px;font-weight:600;color:#FF2D55">${nextLabel}</div>
+    </div>
+
+    <div class="sl">Next 2 Weeks — tap a 💪 day to mark unavailable</div>
+    ${rows}
+
+    <div style="margin-top:12px;margin-bottom:4px">
+      <button class="cal-btn" onclick="exportCal()">
+        📅  Export Workouts to iPhone Calendar
+      </button>
+      <div style="font-size:11px;color:var(--sub);text-align:center;margin-top:7px;line-height:1.4">
+        Exports next 90 days of HIIT sessions as calendar events.<br>Skips any days you've marked unavailable above.
+      </div>
+    </div>`;
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────────────────────────
 function pgDash() {
   const day=dn(), sc=SCHED.find(s=>s.day===day)||SCHED[0];
   const sess=S.workouts.filter(w=>mo(w.date)===tm()).length;
@@ -301,16 +401,16 @@ function pgDash() {
           ${barChart(md,12)}
           <div style="font-size:10px;color:var(--sub);text-align:center;margin-top:5px">Gold line = 12 session target</div>
         </div>` : ''}
-
       <div style="height:16px"></div>
     </div>`;
 }
 
+// ── WORKOUT ────────────────────────────────────────────────────────────────────
 function pgWork() {
-  const rBtns = ['R1','R2','R3'].map((r,i)=>
+  const rBtns=['R1','R2','R3'].map((r,i)=>
     `<button class="tg${S.wR[i]?' tg-g':''}" onclick="tR(${i})">${S.wR[i]?'✓ ':''}${r}</button>`).join('');
 
-  const tList = ['HIIT Monday','HIIT Thursday','HIIT Saturday','Dance Teaching','Light Walk'].map(t=>
+  const tList=['HIIT Monday','HIIT Thursday','HIIT Saturday','Dance Teaching','Light Walk'].map(t=>
     `<div onclick="pT('${esc(t)}')" style="padding:10px 13px;border-radius:10px;margin-bottom:5px;cursor:pointer;
       background:${S.wT===t?'rgba(255,45,85,.15)':'var(--card)'};
       border:1px solid ${S.wT===t?'rgba(255,45,85,.4)':'var(--bdr)'};
@@ -362,8 +462,8 @@ function pgWork() {
       </div>
     </div>` : '';
 
-  const recent = [...S.workouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12);
-  const hist = recent.length ? recent.map(w=>`
+  const recent=[...S.workouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
+  const hist=recent.length?recent.map(w=>`
     <div class="wc">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
@@ -380,7 +480,7 @@ function pgWork() {
           <div style="font-size:12px;color:#30D158;font-weight:700">${w.completedRounds}/3 rounds</div>
         </div>
       </div>
-    </div>`).join('') : '<div class="empty">No sessions yet — log your first one! 💪</div>';
+    </div>`).join(''):`<div class="empty">No sessions yet — log your first one! 💪</div>`;
 
   return `
     <div class="pt">Workout Log</div>
@@ -389,6 +489,7 @@ function pgWork() {
         ${S.wForm?'✕ Cancel':'＋ Log a Session'}
       </button>
       ${form}
+
       <div class="card" style="margin-top:11px">
         <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="S.circuit=!S.circuit;render()">
           <div style="font-weight:700;font-size:15px">🔥 Circuit Reference</div>
@@ -396,12 +497,16 @@ function pgWork() {
         </div>
         ${circ}
       </div>
+
+      ${upcomingScheduleHTML()}
+
       ${recent.length?'<div class="sl">Recent Sessions</div>':''}
       ${hist}
       <div style="height:16px"></div>
     </div>`;
 }
 
+// ── MEASUREMENTS ──────────────────────────────────────────────────────────────
 function pgBody() {
   const sm=[...S.measurements].sort((a,b)=>a.date.localeCompare(b.date));
   const f=sm[0], la=sm[sm.length-1];
@@ -412,7 +517,7 @@ function pgBody() {
   };
   const cd=sm.map(m=>({name:fd(m.date),weight:m.weight,waist:m.waist}));
 
-  const form = S.mForm ? `
+  const form=S.mForm?`
     <div class="card c2" style="margin-top:11px">
       <div style="font-size:16px;font-weight:700;margin-bottom:13px">New Entry</div>
       <div style="background:rgba(255,214,10,.1);border:1px solid rgba(255,214,10,.28);border-radius:10px;padding:10px 13px;margin-bottom:13px;font-size:12px;color:#FFD60A">
@@ -430,7 +535,7 @@ function pgBody() {
       </div>
     </div>` : '';
 
-  const stats = la ? `
+  const stats=la?`
     <div class="sl">Latest · ${fd(la.date)}</div>
     <div class="sg">
       ${[{l:'Weight',v:la.weight,u:'kg',c:'#0A84FF',k:'weight'},
@@ -446,11 +551,11 @@ function pgBody() {
           </div>`).join('')}
     </div>` : '';
 
-  const charts = cd.length>=2 ? `
+  const charts=cd.length>=2?`
     <div class="sl">Weight Trend</div>
     <div class="card">${lineChart(cd,'weight','#0A84FF')}</div>
     ${cd.some(d=>d.waist)?`<div class="sl">Waist Trend</div><div class="card">${lineChart(cd.filter(d=>d.waist),'waist','#FF2D55')}</div>`:''}
-    ` : '';
+    `:'';
 
   return `
     <div class="pt">Measurements</div>
@@ -464,20 +569,33 @@ function pgBody() {
     </div>`;
 }
 
+// ── SKINCARE (with date picker) ───────────────────────────────────────────────
 function pgSkin() {
-  const tday=td();
-  const ent=S.skincare.find(x=>x.date===tday)||{date:tday,checks:{},score:0};
-  const chk=ent.checks||{};
-  const sc=AS.filter(s=>chk[s.id]).length, str=calcStreak();
+  const sdate = S.skinDate;
+  const tday  = td();
+  const ent   = S.skincare.find(x=>x.date===sdate) || {date:sdate, checks:{}, score:0};
+  const chk   = ent.checks || {};
+  const sc    = AS.filter(s=>chk[s.id]).length;
+  const str   = calcStreak();
+
+  // 7-day chart always shows last 7 days from today
   const l7=Array.from({length:7},(_,i)=>{
     const d=new Date(); d.setDate(d.getDate()-(6-i));
     const k=d.toISOString().split('T')[0];
     const x=S.skincare.find(v=>v.date===k);
     return {n:DAYS[d.getDay()].slice(0,2), s:x?.score??0};
   });
-  const bc=sc>=6?'#30D158':sc>=4?'#FFD60A':'#FF2D55';
-  const bm=sc>=6?'✅ Full day — great consistency!':sc>=4?'⚠️ Almost there — a few steps left':'❌ Keep going — you can do it!';
-  const sRow=s=>`
+
+  const bc = sc>=6?'#30D158':sc>=4?'#FFD60A':'#FF2D55';
+  const bm = sc>=6?'✅ Full day — great consistency!':sc>=4?'⚠️ Almost there — a few steps left':'❌ Keep going — you can do it!';
+
+  // Date navigation
+  const isPast   = sdate < tday;
+  const isToday  = sdate === tday;
+  const isFuture = sdate > tday;
+  const dlabel   = dateLabel(sdate);
+
+  const sRow = s => `
     <div class="step${chk[s.id]?' done':''}" id="sp-${s.id}" onclick="tStep('${s.id}')">
       <div class="si">${chk[s.id]?'✓':s.ic}</div>
       <div><div class="sn">${s.lb}</div><div class="sh">${s.ht}</div></div>
@@ -494,15 +612,30 @@ function pgSkin() {
       </div>
     </div>
     <div class="pad">
+
+      <!-- Date Picker -->
+      <div class="date-nav">
+        <button onclick="changeSkinDate(-1)">‹</button>
+        <div style="text-align:center">
+          <div style="font-size:16px;font-weight:700;color:${isToday?'var(--text)':'#FFD60A'}">${dlabel}</div>
+          <div style="font-size:12px;color:var(--sub);margin-top:2px">
+            ${isToday?'Logging for today':'Editing past entry — streak still counts from today'}
+          </div>
+        </div>
+        <button onclick="changeSkinDate(1)" ${isToday?'disabled':''}>›</button>
+      </div>
+
+      <!-- Score bar -->
       <div class="card" style="padding:14px;margin-bottom:11px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
-          <div style="font-size:14px;font-weight:600">Today's Score</div>
+          <div style="font-size:14px;font-weight:600">${dlabel}'s Score</div>
           ${bdg(sc+'/8',bc)}
         </div>
         <div class="pbt"><div id="pbf" class="pbf" style="width:${(sc/8)*100}%;background:${bc}"></div></div>
         <div id="pbm" style="font-size:11px;color:var(--sub);margin-top:7px">${bm}</div>
       </div>
 
+      <!-- AM -->
       <div class="card">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
           <span style="font-size:18px">☀️</span>
@@ -512,6 +645,7 @@ function pgSkin() {
         ${AM.map(sRow).join('')}
       </div>
 
+      <!-- PM -->
       <div class="card">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
           <span style="font-size:18px">🌙</span>
@@ -521,12 +655,14 @@ function pgSkin() {
         ${PM.map(sRow).join('')}
       </div>
 
-      <div class="sl">Last 7 Days</div>
+      <!-- 7-day chart (always from today) -->
+      <div class="sl">Last 7 Days (from today)</div>
       <div class="card">
         ${skinChart(l7)}
         <div style="font-size:10px;color:var(--sub);text-align:center;margin-top:5px">Green line = daily target (6/8 steps)</div>
       </div>
 
+      <!-- Reminders -->
       <div class="card c2" style="border-color:rgba(255,214,10,.3)">
         <div style="font-size:12px;font-weight:700;color:#FFD60A;margin-bottom:7px">💡 Key Reminders</div>
         ${['SPF every morning — no exceptions, even Swiss winter',
@@ -542,7 +678,7 @@ function pgSkin() {
 
 // ── Nav & Render ──────────────────────────────────────────────────────────────
 function renderNav(){
-  document.getElementById('nav').innerHTML =
+  document.getElementById('nav').innerHTML=
     [{id:'dashboard',i:'🏠',l:'Home'},{id:'workout',i:'🏋️',l:'Workout'},{id:'body',i:'📏',l:'Body'},{id:'skincare',i:'✨',l:'Skin'}]
     .map(t=>`
       <button class="nb${S.tab===t.id?' on':''}" onclick="go('${t.id}')">
@@ -554,55 +690,105 @@ function renderNav(){
 
 function render(){
   const pages={dashboard:pgDash, workout:pgWork, body:pgBody, skincare:pgSkin};
-  document.getElementById('content').innerHTML = (pages[S.tab]||pgDash)();
-  document.getElementById('scroll').scrollTop = 0;
+  document.getElementById('content').innerHTML=(pages[S.tab]||pgDash)();
+  document.getElementById('scroll').scrollTop=0;
   renderNav();
 }
 
 // ── Event Handlers ─────────────────────────────────────────────────────────────
-window.go     = t  => { S.tab=t; render(); };
-window.tR     = i  => { S.wR[i]=!S.wR[i]; render(); };
-window.pW     = w  => { S.wW=w; render(); };
-window.pT     = t  => { S.wT=t; render(); };
-window.sD     = v  => { S.wDur=+v; render(); };
-window.sI     = v  => { S.wInt=+v; render(); };
+window.go  = t => { S.tab=t; render(); };
+window.tR  = i => { S.wR[i]=!S.wR[i]; render(); };
+window.pW  = w => { S.wW=w; render(); };
+window.pT  = t => { S.wT=t; render(); };
+window.sD  = v => { S.wDur=+v; render(); };
+window.sI  = v => { S.wInt=+v; render(); };
+
+// Navigate skincare date (prev/next day)
+window.changeSkinDate = n => {
+  const d=new Date(S.skinDate+'T12:00:00');
+  d.setDate(d.getDate()+n);
+  const nd=d.toISOString().split('T')[0];
+  if(nd<=td()){ S.skinDate=nd; render(); }
+};
+
+// Toggle a workout day as unavailable / restore it
+window.toggleRest = ds => {
+  if(S.restDays[ds]) delete S.restDays[ds];
+  else S.restDays[ds]=true;
+  db.set('tr-restdays', S.restDays);
+  render();
+};
+
+// Export next 90 days of HIIT workouts as .ics calendar file
+window.exportCal = () => {
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//My Tracker//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  let count=0;
+  for(let i=0;i<90;i++){
+    const d=new Date(); d.setDate(d.getDate()+i);
+    const ds=d.toISOString().split('T')[0];
+    if(S.restDays[ds]) continue;
+    const day=DAYS[d.getDay()];
+    if(!WORKOUT_DAYS.includes(day)) continue;
+    const dc=ds.replace(/-/g,'');
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:hiit-${dc}@mytracker`,
+      `DTSTART;VALUE=DATE:${dc}`,
+      `DTEND;VALUE=DATE:${dc}`,
+      'SUMMARY:💪 HIIT Workout (25–30 min)',
+      'DESCRIPTION:Home circuit · 3 rounds:\\nJumping Jacks · Push-Ups · Squat Jumps · Mountain Climbers · Reverse Lunges · Plank · Burpees\\n40s work per exercise · 60s rest between rounds',
+      'CATEGORIES:FITNESS',
+      'END:VEVENT'
+    );
+    count++;
+  }
+  lines.push('END:VCALENDAR');
+
+  if(count===0){ alert('No workout days to export (all marked unavailable)'); return; }
+
+  const ics=lines.join('\r\n');
+  const blob=new Blob([ics],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=Object.assign(document.createElement('a'),{href:url,download:'my-workouts.ics'});
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
 
 window.svW = () => {
-  const date  = document.getElementById('wfd')?.value || td();
-  const notes = document.getElementById('wfn')?.value || '';
-  S.workouts.push({
-    id: Date.now(), date, week:S.wW, type:S.wT,
-    rounds:[...S.wR], completedRounds:S.wR.filter(Boolean).length,
-    duration:S.wDur, intensity:S.wInt, notes
-  });
-  db.set('tr-workouts', S.workouts);
+  const date =document.getElementById('wfd')?.value||td();
+  const notes=document.getElementById('wfn')?.value||'';
+  S.workouts.push({id:Date.now(),date,week:S.wW,type:S.wT,
+    rounds:[...S.wR],completedRounds:S.wR.filter(Boolean).length,
+    duration:S.wDur,intensity:S.wInt,notes});
+  db.set('tr-workouts',S.workouts);
   S.wForm=false; S.wR=[true,true,true]; S.wDur=28; S.wInt=7;
   render();
 };
 
 window.svM = () => {
-  const w = parseFloat(document.getElementById('mfw')?.value);
-  if(!w){ alert('Please enter your weight'); return; }
-  S.measurements.push({
-    id:Date.now(), date:document.getElementById('mfd')?.value||td(),
+  const w=parseFloat(document.getElementById('mfw')?.value);
+  if(!w){alert('Please enter your weight');return}
+  S.measurements.push({id:Date.now(),
+    date: document.getElementById('mfd')?.value||td(),
     weight:w,
-    waist:parseFloat(document.getElementById('mfwa')?.value)||null,
-    chest:parseFloat(document.getElementById('mfc')?.value)||null,
-    hips: parseFloat(document.getElementById('mfh')?.value)||null,
-    notes:document.getElementById('mfn')?.value||''
+    waist: parseFloat(document.getElementById('mfwa')?.value)||null,
+    chest: parseFloat(document.getElementById('mfc')?.value)||null,
+    hips:  parseFloat(document.getElementById('mfh')?.value)||null,
+    notes: document.getElementById('mfn')?.value||''
   });
-  db.set('tr-measurements', S.measurements);
+  db.set('tr-measurements',S.measurements);
   S.mForm=false; render();
 };
 
+// Toggle a skincare step — works for any selected date (past or today)
 window.tStep = id => {
-  const tday=td();
-  let ent=S.skincare.find(x=>x.date===tday);
-  if(!ent){ ent={date:tday,checks:{},score:0}; S.skincare.push(ent); }
-  ent.checks[id] = !ent.checks[id];
-  ent.score = AS.filter(s=>ent.checks[s.id]).length;
-  db.set('tr-skincare', S.skincare);
-  // Targeted DOM update — instant, no re-render
+  const sdate=S.skinDate;
+  let ent=S.skincare.find(x=>x.date===sdate);
+  if(!ent){ent={date:sdate,checks:{},score:0}; S.skincare.push(ent);}
+  ent.checks[id]=!ent.checks[id];
+  ent.score=AS.filter(s=>ent.checks[s.id]).length;
+  db.set('tr-skincare',S.skincare);
+  // Targeted DOM update
   const el=document.getElementById('sp-'+id);
   if(el){
     const done=ent.checks[id];
@@ -613,19 +799,19 @@ window.tStep = id => {
   }
   const sc=ent.score, bc=sc>=6?'#30D158':sc>=4?'#FFD60A':'#FF2D55';
   const pb=document.getElementById('pbf');
-  if(pb){ pb.style.width=(sc/8*100)+'%'; pb.style.background=bc; }
+  if(pb){pb.style.width=(sc/8*100)+'%'; pb.style.background=bc;}
   const pm=document.getElementById('pbm');
   if(pm) pm.textContent=sc>=6?'✅ Full day — great consistency!':sc>=4?'⚠️ Almost there — a few steps left':'❌ Keep going — you can do it!';
   const bd=document.querySelector('.bdg');
-  if(bd){ bd.textContent=sc+'/8'; bd.style.background=bc+'22'; bd.style.color=bc; bd.style.borderColor=bc+'44'; }
+  if(bd){bd.textContent=sc+'/8'; bd.style.background=bc+'22'; bd.style.color=bc; bd.style.borderColor=bc+'44';}
 };
 
-// ── Service Worker Registration ────────────────────────────────────────────────
+// ── Service Worker ────────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){
-  window.addEventListener('load', () => {
+  window.addEventListener('load',()=>{
     navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('✅ Offline ready'))
-      .catch(e => console.log('SW error:', e));
+      .then(()=>console.log('✅ Offline ready'))
+      .catch(e=>console.log('SW:',e));
   });
 }
 
